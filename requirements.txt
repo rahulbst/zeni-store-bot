@@ -1,0 +1,12 @@
+pyrogram
+tgcrypto
+motor
+dnspython
+flask
+psutil
+speedtest-cli
+requests
+aiohttp
+pytz
+syncedlyrics
+deep-translator
