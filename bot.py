@@ -1,4 +1,3 @@
-
 # ------------------------- #
 # Don't Remove Credit 
 # Ask Doubt @AU_Bot_Discussion 
@@ -111,10 +110,11 @@ logging.basicConfig(level=logging.INFO)
 # ------------------------- #
 
 IMAGES = [
-    "AgACAgUAAxkBAAIHiWpiB1zFmP1eQSpb5TUztD0UKoDdAAI7GWsblIMIV43SgSB8TbQyAAgBAAMCAAN3AAceBA",
-    "AgACAgUAAxkBAAIHi2piCw1SzmzOMAWDjV-yvd73IOQ0AAKDE2sblIMQV-Hxw982KnNVAAgBAAMCAAN5AAceBA",
-    "AgACAgUAAxkBAAIHjWpiCxpIuLdo7rDcJN9ESUQsAAGM5QACPRJrG5NGsVYJAoYha3x6rgAIAQADAgADeQAHHgQ",
-    "AgACAgUAAxkBAAIHj2piCyPqgt7BK5fXiyeZNVYmbT3AAAK1FGsb0zHAVs3uxQOJqpNyAAgBAAMCAAN5AAceBA"
+    "AgACAgUAAxkBAAMeam5IMAtrShJvDiMfFV3Kcp2xTaYAAoMTaxuUgxBXdPa1mtV0jqgACAEAAwIAA3kABx4E",
+    "AgACAgUAAxkBAAMiam5KHXAS602_-8RaI4wvR1WnJ_MAAkkXaxvC13BX-10dv9Yk60oACAEAAwIAA3kABx4E",
+    "AgACAgUAAxkBAAMkam5KHe90pZIFf8ZcHEBBGgOqC7QAAksXaxvC13BXrSASxDIpvxsACAEAAwIAA3kABx4E",
+    "AgACAgUAAxkBAAMlam5KHcs4Xo7BZYIXjaApjJAka10AAkwXaxvC13BXLiEXkyPmASkACAEAAwIAA3kABx4E",
+    "AgACAgUAAxkBAAMjam5KHbEloScVFRrnShZyqNudvQ8AAkoXaxvC13BX9IHIzUYWSpUACAEAAwIAA3kABx4E"
 ]
 
 # ------------------------- #
@@ -511,7 +511,7 @@ async def start(client, message: Message):
         return await message.reply_text(
             "🚫 **You are banned from using this bot.**\n\n"
             "**If you believe this is a mistake, contact the "
-            "[Owner](https://t.me/Mr_Mohammed_29).**",
+            "[Owner](https://t.me/rarefroxy).**",
             parse_mode=ParseMode.MARKDOWN,
             disable_web_page_preview=True
         )
@@ -598,11 +598,11 @@ async def start(client, message: Message):
 
                         caption = (
                             f"**{original_caption}**\n\n"
-                            f"**›› ʙʏ : [ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/Aero_Unity)**"
+                            f"**›› ʙʏ : [ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
                         )
 
                         buttons = InlineKeyboardMarkup(
-                            [[InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/Aero_Unity")]]
+                            [[InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/sneakycode")]]
                         )
 
                         if msg.video:
@@ -711,11 +711,11 @@ async def start(client, message: Message):
         original_caption = data.get("caption", "")
         caption = (
     f"**{original_caption}**\n\n"
-    f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/Aero_Unity)**"
+    f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
 )
 
         buttons = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/Aero_Unity")]]
+            [[InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/sneakycode")]]
         )
 
         if data.get("file_type") == "video":
@@ -812,11 +812,11 @@ async def start(client, message: Message):
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/Aero_Unity"),
+                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/sneakycode"),
                     InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("• ᴏᴡɴᴇʀ •", url="https://t.me/Mr_Mohammed_29")
+                    InlineKeyboardButton("• ᴏᴡɴᴇʀ •", url="https://t.me/rarefroxy")
                 ]
             ]
         ),
@@ -1693,13 +1693,13 @@ async def about_callback(client, query):
     await query.message.edit_text(
         "⍟───[ MY ᴅᴇᴛᴀɪʟꜱ ]───⍟\n\n"
         "‣ ᴍʏ ɴᴀᴍᴇ : [ᴀᴇʀᴏ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ](https://t.me/Aero_FileStoreBot)\n"
-        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : [ᴍᴏʜᴀᴍᴍᴇᴅ](https://t.me/Mr_Mohammed_29)\n"
+        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : [ᴍᴏʜᴀᴍᴍᴇᴅ](https://t.me/rarefroxy)\n"
         "‣ ʟɪʙʀᴀʀʏ : [ᴘʏʀᴏɢʀᴀᴍ 𝟸.𝟶](https://pypi.org/project/Pyrogram/)\n"
         "‣ ʟᴀɴɢᴜᴀɢᴇ : [ᴘʏᴛʜᴏɴ 𝟹](https://www.python.org/downloads/)\n"
         "‣ ᴅᴀᴛᴀ ʙᴀsᴇ : [ᴍᴏɴɢᴏ ᴅʙ](https://www.mongodb.com/)\n"
         "‣ ʙᴏᴛ sᴇʀᴠᴇʀ : [Bᴏᴛs Sᴇʀᴠᴇʀ](https://render.com)\n"
-        "‣ ᴜᴘᴅᴀᴛᴇs : [ᴀɴɪᴍᴇ ᴜᴘᴅᴀᴛᴇs](https://t.me/Aero_Unity)\n"
-        "‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ3.𝟶 [sᴛᴀʙʟᴇ](https://t.me/Aero_Unity)",
+        "‣ ᴜᴘᴅᴀᴛᴇs : [ᴀɴɪᴍᴇ ᴜᴘᴅᴀᴛᴇs](https://t.me/sneakycode)\n"
+        "‣ ʙᴜɪʟᴅ sᴛᴀᴛᴜs : ᴠ3.𝟶 [sᴛᴀʙʟᴇ](https://t.me/sneakycode)",
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("ʜᴏᴍᴇ", callback_data="home")]]
         ),
@@ -1729,11 +1729,11 @@ async def home_callback(client, query):
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/Aero_Unity"),
+                    InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/sneakycode"),
                     InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
                 ],
                 [
-                    InlineKeyboardButton("• ᴏᴡɴᴇʀ •", url="https://t.me/Mr_Mohammed_29")
+                    InlineKeyboardButton("• ᴏᴡɴᴇʀ •", url="https://t.me/rarefroxy")
                 ]
             ]
         )
@@ -2020,8 +2020,8 @@ VERSION_TEXT = f"""
 ⚡ <b>• Pʏʀᴏɢʀᴀᴍ •</b> <code>𝟸.𝟶.𝟷𝟶𝟼</code>
 🗄  <b>• Dᴀᴛᴀʙᴀsᴇ •</b> <code>MᴏɴɢᴏDB Aᴛʟᴀs</code>
 🌐 <b>• Hᴏsᴛɪɴɢ •</b> <code>Rᴇɴᴅᴇʀ Wᴇʙ Sᴇʀᴠɪᴄᴇ</code>
-👨‍💻 <b>• Dᴇᴠᴇʟᴏᴘᴇʀ •</b> <a href="https://t.me/Mr_Mohammed_29">Mᴏʜᴀᴍᴍᴇᴅ</a>
-📢 <b>• ᴜᴘᴅᴀᴛᴇs •</b> <a href="https://t.me/Aero_Unity">Aᴇʀᴏ Uɴɪᴛʏ</a>
+👨‍💻 <b>• Dᴇᴠᴇʟᴏᴘᴇʀ •</b> <a href="https://t.me/rarefroxy">Mᴏʜᴀᴍᴍᴇᴅ</a>
+📢 <b>• ᴜᴘᴅᴀᴛᴇs •</b> <a href="https://t.me/sneakycode">Aᴇʀᴏ Uɴɪᴛʏ</a>
 💬 <b>• sᴜᴘᴘᴏʀᴛ •</b> <a href="https://t.me/+KWvhNb8kkmExNDc1">Discussion</a>
 🌟 <b>• Gɪᴛʜᴜʙ •</b> <a href="https://github.com/MohammedDev-yt">Cʟɪᴄᴋ Hᴇʀᴇ</a>
 """
@@ -2148,7 +2148,7 @@ async def support_page(client, query):
                 [
                     InlineKeyboardButton(
                         "• ᴅᴇᴠᴇʟᴏᴘᴇʀ •",
-                        url="https://t.me/Mr_Mohammed_29"
+                        url="https://t.me/rarefroxy"
                     ),
                     InlineKeyboardButton(
                         "• sᴜᴘᴘᴏʀᴛ •",
@@ -2158,7 +2158,7 @@ async def support_page(client, query):
                 [
                     InlineKeyboardButton(
                         "• ᴜᴘᴅᴀᴛᴇs •",
-                        url="https://t.me/Aero_Unity"
+                        url="https://t.me/sneakycode"
                     )
                 ],
                 [
@@ -2842,7 +2842,7 @@ if __name__ == "__main__":
     )
     print("""
 ╔══════════════════════════════╗
-║   ᴍᴏʜᴀᴍᴍᴇᴅᴅᴇᴠ-ʏᴛ                   ║
+║   sneaky only                  ║
 ║   ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ sᴛᴀʀᴛᴇᴅ.            ║
 ╚══════════════════════════════╝
 """)
