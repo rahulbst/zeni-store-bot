@@ -17,34 +17,34 @@ def must_get(name):
 # Owner @Mr_Mohammed_29
 # ------------------------- #
 
-API_ID = int(must_get("36375423"))
-API_HASH = must_get("d3be01028d6c54fccd9d33a51169a10e")
-BOT_TOKEN = must_get("8712326978:AAFVSgYyrfTQTuymdiy7iaEkkaEAgZfNiEs")
+API_ID = int(must_get("API_ID"))
+API_HASH = must_get("API_HASH")
+BOT_TOKEN = must_get("BOT_TOKEN")
 
 # ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
 
-MONGO_URI = must_get("mongodb+srv://Ainbot:aimbotxe@cluster0.vdz9utn.mongodb.net/?appName=Cluster0")
+MONGO_URI = must_get("MONGO_URI")
 
 # ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
 
-BOT_USERNAME = must_get("Zenistorebot")
+BOT_USERNAME = must_get("BOT_USERNAME")
 
-CHANNEL_ID = int(must_get("-1004400249043"))
+CHANNEL_ID = int(must_get("CHANNEL_ID"))
 
 # ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
 
-OWNER_ID = int(must_get("8912546448"))
+OWNER_ID = int(must_get("OWNER_ID"))
 
-LOG_CHANNEL = int(must_get("-1004319030561"))
+LOG_CHANNEL = int(must_get("LOG_CHANNEL"))
 
 PORT = int(os.getenv("PORT", "10000"))
 
