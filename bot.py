@@ -640,7 +640,7 @@ async def start(client, message: Message):
 
                         caption = (
                             f"**{original_caption}**\n\n"
-                            f"**›› ʙʏ : [ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
+                            f"**›› ʙʏ : [sneaky](https://t.me/sneakycode)**"
                         )
 
                         buttons = InlineKeyboardMarkup(
@@ -1710,7 +1710,7 @@ async def checksub_callback(client, query):
 async def about_callback(client, query):
     await query.message.edit_text(
         "⍟───[ MY ᴅᴇᴛᴀɪʟꜱ ]───⍟\n\n"
-        "‣ ᴍʏ ɴᴀᴍᴇ : [ᴀᴇʀᴏ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ](https://t.me/Aero_FileStoreBot)\n"
+        "‣ ᴍʏ ɴᴀᴍᴇ : [ᴀᴇʀᴏ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ](https://t.me/ZENISTOREBOT)\n"
         "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : [ᴍᴏʜᴀᴍᴍᴇᴅ](https://t.me/rarefroxy)\n"
         "‣ ʟɪʙʀᴀʀʏ : [ᴘʏʀᴏɢʀᴀᴍ 𝟸.𝟶](https://pypi.org/project/Pyrogram/)\n"
         "‣ ʟᴀɴɢᴜᴀɢᴇ : [ᴘʏᴛʜᴏɴ 𝟹](https://www.python.org/downloads/)\n"
