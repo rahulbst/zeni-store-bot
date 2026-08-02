@@ -48,6 +48,12 @@ MAX_CHARS = 3500
 TIMEZONE = "Asia/Kolkata"
 
 # ------------------------- #
+# NEW: Force Sub Image (hardcoded so it works
+# regardless of config.py's FORCE_SUB_IMAGE value)
+# ------------------------- #
+FORCE_SUB_IMAGE_URL = "https://i.postimg.cc/G3s9zkkK/photo-2026-08-02-01-03-48.jpg"
+
+# ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
@@ -587,7 +593,7 @@ async def start(client, message: Message):
 
     if not ok:
         return await message.reply_photo(
-            photo=FORCE_SUB_IMAGE,
+            photo=FORCE_SUB_IMAGE_URL,
             caption=(
                 "**›› ‼️ ʟᴏᴏᴋs ʟɪᴋᴇ ʏᴏᴜ ʜᴀᴠᴇɴ'ᴛ ᴊᴏɪɴᴇᴅ ᴛᴏ ᴏᴜʀ ᴄʜᴀɴɴᴇʟs ʏᴇᴛ, sᴜʙsᴄʀɪʙᴇ ɴᴏᴡ...**\n\n"
                 "• ᴘʀᴇss **ᴛʀʏ ᴀɢᴀɪɴ**."
@@ -610,16 +616,38 @@ async def start(client, message: Message):
     if len(message.command) > 1:
         param = message.command[1]
 
-        # ================= BATCH LINK =================
+        # ================= CHECK IF THIS IS A BATCH LINK =================
+        # IMPORTANT FIX:
+        # Earlier code wrapped decode + batch-sending + "return" all inside
+        # ONE try/except, and the except block did a bare "return".
+        # That meant: whenever a NORMAL single-file link's file_unique_id
+        # failed to base64-decode (which happens often, since it's not
+        # actually base64 data), the whole function silently exited and
+        # the single-file code below never ran -> "link generates but
+        # no file is delivered".
+        #
+        # Fix: only use the try/except to DETECT whether it's a batch
+        # link. If decoding fails or it doesn't start with "batch:",
+        # we simply fall through to the normal single-file logic below.
+        # ------------------------------------------------------------
+
+        is_batch = False
+        decoded = None
 
         try:
-
             decoded = base64.urlsafe_b64decode(
                 param + "=" * (-len(param) % 4)
             ).decode("utf-8", errors="ignore")
 
             if decoded.startswith("batch:"):
+                is_batch = True
 
+        except Exception:
+            is_batch = False
+
+        if is_batch:
+
+            try:
                 _, chat_id, first_id, last_id = decoded.split(":")
 
                 chat_id = int(chat_id)
@@ -755,13 +783,17 @@ async def start(client, message: Message):
                     await warn.delete()
                 except:
                     pass
- 
-                return
 
-        except Exception as e:
+            except Exception as e:
+                print(e)
+
             return
 
-        file_unique_id = message.command[1]
+        # ================= SINGLE FILE LINK =================
+        # (This now correctly runs whenever the param isn't a batch link,
+        # instead of being silently skipped.)
+
+        file_unique_id = param
         data = await get_file(file_unique_id)
 
         if not data:
