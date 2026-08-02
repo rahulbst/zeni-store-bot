@@ -1,9 +1,3 @@
-# ------------------------- #
-# Don't Remove Credit 
-# Ask Doubt @AU_Bot_Discussion 
-# Owner @Mr_Mohammed_29 
-# ------------------------- #
-
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import *
@@ -156,7 +150,10 @@ from database import (
     add_database,
     get_all_databases,
     get_active_database as get_saved_active_database,
-    set_active_database
+    set_active_database,
+    add_word_filter,
+    remove_word_filter,
+    get_word_filters
 )
 
 from multidb import (
@@ -198,6 +195,39 @@ def format_size(size):
         n += 1
 
     return f"{size:.2f} {units[n]}"
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# WORD FILTER SYSTEM
+# ------------------------- #
+# Owner/Admin jo bhi word ya @tag /addfilter se
+# add karega, wo caption se automatically hat jayega
+# jab file user ko deliver hogi (single ya batch link).
+# ------------------------- #
+
+import re as _filter_re
+
+def clean_caption(caption, filters_list):
+
+    if not caption or not filters_list:
+        return caption
+
+    for word in filters_list:
+        caption = _filter_re.sub(
+            _filter_re.escape(word),
+            "",
+            caption,
+            flags=_filter_re.IGNORECASE
+        )
+
+    caption = _filter_re.sub(r"[ \t]+", " ", caption)
+    caption = _filter_re.sub(r"\n\s*\n+", "\n", caption).strip()
+
+    return caption
 
 # ------------------------- #
 # Don't Remove Credit 
@@ -251,6 +281,40 @@ LETTERS = [
     "H","I","J","K","L","M","N",
     "O","P","Q","R","S","T",
     "U","V","W","X","Y","Z"
+]
+
+# List of commands excluded from generic text/private handlers.
+# NOTE: addfilter / removefilter / filterlist added here too.
+COMMAND_EXCLUDE_LIST = [
+    "start",
+    "batch",
+    "stats",
+    "broadcast",
+    "addadmin",
+    "removeadmin",
+    "adminlist",
+    "addfsub",
+    "removefsub",
+    "fsublist",
+    "index",
+    "ban",
+    "unban",
+    "banlist",
+    "alive",
+    "id",
+    "system", 
+    "restart",
+    "disclaimer",
+    "speedtest",
+    "adddb",
+    "removedb",
+    "dblist",
+    "dbstatus",
+    "lyrics",
+    "translate",
+    "addfilter",
+    "removefilter",
+    "filterlist"
 ]
 
 # ================= GET MESSAGE ID =================
@@ -318,34 +382,7 @@ async def batch_command(client, message):
 @app.on_message(
     filters.private &
     filters.text &
-    ~filters.command([
-        "start",
-        "batch",
-        "stats",
-        "broadcast",
-        "addadmin",
-        "removeadmin",
-        "adminlist",
-        "addfsub",
-        "removefsub",
-        "fsublist",
-        "index",
-        "ban",
-        "unban",
-        "banlist",
-        "alive",
-        "id",
-        "system", 
-        "restart",
-        "disclaimer",
-        "speedtest",
-        "adddb",
-        "removedb",
-        "dblist",
-        "dbstatus",
-        "lyrics",
-        "translate"
-    ])
+    ~filters.command(COMMAND_EXCLUDE_LIST)
 )
 async def handle_batch(client, message):
 
@@ -586,6 +623,10 @@ async def start(client, message: Message):
 
                 wait = await message.reply_text("⏳ sᴇɴᴅɪɴɢ ғɪʟᴇs...")
 
+                # Load word filters once for the whole batch,
+                # instead of hitting DB per-file.
+                batch_filters = await get_word_filters()
+
                 for msg_id in range(first_id, last_id + 1):
 
                     try:
@@ -595,6 +636,7 @@ async def start(client, message: Message):
                             continue
 
                         original_caption = msg.caption if msg.caption else ""
+                        original_caption = clean_caption(original_caption, batch_filters)
 
                         caption = (
                             f"**{original_caption}**\n\n"
@@ -709,6 +751,10 @@ async def start(client, message: Message):
             return await message.reply_text("🔎 Fɪʟᴇ Is Nᴏᴛ Fᴏᴜɴᴅ, Cᴏɴᴛᴀᴄᴛ Tᴏ Oᴡɴᴇʀ.")
 
         original_caption = data.get("caption", "")
+
+        single_filters = await get_word_filters()
+        original_caption = clean_caption(original_caption, single_filters)
+
         caption = (
     f"**{original_caption}**\n\n"
     f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
@@ -1020,35 +1066,7 @@ async def broadcast(client, message: Message):
 @app.on_message(
     filters.private &
     ~filters.service &
-    ~filters.command([
-        "start",
-        "batch",
-        "stats",
-        "broadcast",
-        "addadmin",
-        "removeadmin",
-        "adminlist",
-        "addfsub",
-        "removefsub",
-        "fsublist",
-        "index",
-        "ban",
-        "unban",
-        "banlist",
-        "alive",
-        "id",
-        "system",
-        "restart",
-        "disclaimer",
-        "speedtest",
-        "adddb",
-        "removedb",
-        "dblist",
-        "dbstatus",
-        "lyrics",
-        "translate"
-        
-    ])
+    ~filters.command(COMMAND_EXCLUDE_LIST)
 )
 async def auto_add_user(client, message):
 
@@ -2810,6 +2828,85 @@ async def translate_cmd(client, message):
         )
     except Exception as e:
         await message.reply_text(f"❌ Error: <code>{e}</code>")
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# WORD FILTER COMMANDS
+# ------------------------- #
+
+@app.on_message(filters.command("addfilter") & filters.private)
+async def add_filter_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2:
+        return await message.reply_text(
+            "Usage:\n<code>/addfilter word_or_@tag</code>\n\n"
+            "Eg:\n<code>/addfilter @hello</code>"
+        )
+
+    word = message.text.split(None, 1)[1].strip()
+
+    await add_word_filter(word)
+
+    await message.reply_text(
+        f"✅ <b>Fɪʟᴛᴇʀ Aᴅᴅᴇᴅ:</b> <code>{word}</code>\n\n"
+        f"Ab is word/tag ko har file ke caption se hata diya jayega."
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+@app.on_message(filters.command("removefilter") & filters.private)
+async def remove_filter_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2:
+        return await message.reply_text(
+            "Usage:\n<code>/removefilter word_or_@tag</code>"
+        )
+
+    word = message.text.split(None, 1)[1].strip()
+
+    await remove_word_filter(word)
+
+    await message.reply_text(
+        f"✅ <b>Fɪʟᴛᴇʀ Rᴇᴍᴏᴠᴇᴅ:</b> <code>{word}</code>"
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+@app.on_message(filters.command("filterlist") & filters.private)
+async def filter_list_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    words = await get_word_filters()
+
+    if not words:
+        return await message.reply_text(
+            "‼️ <b>Kᴏɪ Fɪʟᴛᴇʀ Aᴅᴅ Nᴀʜɪ Kɪᴀ Gᴀʏᴀ Aʙʜɪ.</b>"
+        )
+
+    text = "🧹 <b>Aᴄᴛɪᴠᴇ Fɪʟᴛᴇʀs</b>\n\n"
+
+    for i, w in enumerate(words, start=1):
+        text += f"{i}. <code>{w}</code>\n"
+
+    await message.reply_text(text)
 
 # ------------------------- #
 # Don't Remove Credit 
