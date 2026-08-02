@@ -515,6 +515,76 @@ async def get_link_stats():
 # ------------------------- #
 
 # ------------------------- #
+# CONTENT PROTECTION SYSTEM
+# ------------------------- #
+# Jab ON ho, delivered files forward/save/share
+# nahi ki ja sakengi (Telegram's protect_content).
+# Default: OFF (agar kabhi set na kiya gaya ho).
+# ------------------------- #
+
+async def set_protect_content(status: bool):
+
+    await db_settings.update_one(
+        {"_id": "protect_content"},
+        {"$set": {"enabled": bool(status)}},
+        upsert=True
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def get_protect_content():
+
+    data = await db_settings.find_one({"_id": "protect_content"})
+
+    if data and "enabled" in data:
+        return data["enabled"]
+
+    return False
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# AUTO DELETE TIME SYSTEM
+# ------------------------- #
+# Admin jitne minutes set karega, files delivery ke
+# baad utne time me automatically delete ho jayengi.
+# Default: 5 minutes agar kabhi set nahi kiya gaya ho.
+# ------------------------- #
+
+async def set_delete_time(minutes):
+
+    await db_settings.update_one(
+        {"_id": "delete_time"},
+        {"$set": {"minutes": float(minutes)}},
+        upsert=True
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def get_delete_time():
+
+    data = await db_settings.find_one({"_id": "delete_time"})
+
+    if data and "minutes" in data:
+        return data["minutes"]
+
+    return 5
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
 # WORD FILTER SYSTEM
 # ------------------------- #
 # Har word/tag jo yaha add hoga, wo caption se
