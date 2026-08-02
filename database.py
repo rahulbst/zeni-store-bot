@@ -38,6 +38,7 @@ admins = db["admins"]
 forcesubs = db["forcesubs"]
 banned = db["banned"]
 stats = db["stats"]
+word_filters = db["word_filters"]
 
 # ------------------------- #
 # Don't Remove Credit 
@@ -507,6 +508,51 @@ async def get_link_stats():
         data.get("single_links", 0),
         data.get("batch_links", 0)
     )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# WORD FILTER SYSTEM
+# ------------------------- #
+# Har word/tag jo yaha add hoga, wo caption se
+# automatically remove ho jayega jab file deliver hogi.
+# ------------------------- #
+
+async def add_word_filter(word):
+
+    await word_filters.update_one(
+        {"word": word.lower()},
+        {"$set": {"word": word.lower()}},
+        upsert=True
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def remove_word_filter(word):
+
+    await word_filters.delete_one(
+        {"word": word.lower()}
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def get_word_filters():
+
+    result = []
+
+    async for w in word_filters.find({}, {"_id": 0}):
+        result.append(w["word"])
+
+    return result
 
 # ------------------------- #
 # Don't Remove Credit 
