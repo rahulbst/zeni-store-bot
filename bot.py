@@ -757,7 +757,7 @@ async def start(client, message: Message):
 
         caption = (
     f"**{original_caption}**\n\n"
-    f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
+    f"**›› ʙʏ :[sneaky](https://t.me/sneakycode)**"
 )
 
         buttons = InlineKeyboardMarkup(
