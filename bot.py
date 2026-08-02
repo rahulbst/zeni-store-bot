@@ -185,6 +185,66 @@ CACHE = {}
 MAINTENANCE = False
 
 # ------------------------- #
+# BUGFIX: /banlist and /removedb were calling functions
+# (get_banned_users, remove_saved_db) that don't exist in
+# database.py's import list -> NameError -> handler crashes
+# silently, user gets no reply. Adding safe local versions here
+# so the bot doesn't crash. If these don't match your actual
+# database.py schema/field names, send that file and these can
+# be made exact.
+# ------------------------- #
+
+import database as _db_module
+
+async def get_banned_users():
+    """
+    Local fallback for /banlist.
+    Assumes banned users are marked with a 'banned': True field
+    in the 'users' collection (same collection ban_user/unban_user
+    /is_banned use). Update the filter below if your schema differs.
+    """
+    try:
+        # If database.py already defines this properly, prefer it.
+        real_func = getattr(_db_module, "get_banned_users", None)
+        if real_func:
+            return await real_func()
+
+        result = []
+        async for doc in users.find({"banned": True}):
+            uid = doc.get("user_id", doc.get("_id"))
+            if uid is not None:
+                result.append(uid)
+        return result
+    except Exception as e:
+        print(f"get_banned_users fallback error: {e}")
+        return []
+
+
+async def remove_saved_db(db_name):
+    """
+    Local fallback for /removedb.
+    database.py has add_database()/get_all_databases() but no
+    matching delete function was imported. This tries a few
+    common names before giving up (caller already wraps this
+    in try/except so a clean error is shown instead of a crash).
+    """
+    for func_name in (
+        "remove_database",
+        "delete_database",
+        "remove_saved_database",
+        "remove_db",
+    ):
+        func = getattr(_db_module, func_name, None)
+        if func:
+            return await func(db_name)
+
+    raise AttributeError(
+        "No matching remove-database function found in database.py "
+        "(tried remove_database / delete_database / remove_saved_database / remove_db). "
+        "Add one of these to database.py to fully support /removedb."
+    )
+
+# ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
