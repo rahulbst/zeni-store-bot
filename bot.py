@@ -1,7 +1,7 @@
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from config import *
-from pyrogram.types import InputMediaPhoto
+from pyrogram.types import InputMediaPhoto, BotCommand
 from pyrogram.enums import ParseMode, ChatMemberStatus
 from pyrogram.errors import FloodWait, UserNotParticipant
 
@@ -153,7 +153,11 @@ from database import (
     set_active_database,
     add_word_filter,
     remove_word_filter,
-    get_word_filters
+    get_word_filters,
+    set_delete_time,
+    get_delete_time,
+    set_protect_content,
+    get_protect_content
 )
 
 from multidb import (
@@ -314,7 +318,10 @@ COMMAND_EXCLUDE_LIST = [
     "translate",
     "addfilter",
     "removefilter",
-    "filterlist"
+    "filterlist",
+    "setdeletetime",
+    "setprotect",
+    "help"
 ]
 
 # ================= GET MESSAGE ID =================
@@ -365,7 +372,7 @@ async def batch_command(client, message):
     if user_id != OWNER_ID and not await is_admin(user_id):
 
         return await message.reply_text(
-            "**ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!**."
+            "**you are not admin bro!!**."
         )
 
     BATCH_USERS[user_id] = {
@@ -590,14 +597,14 @@ async def start(client, message: Message):
         )
 
     # START ANIMATION
-    m = await message.reply_text("ᴍᴏɴᴋᴇʏ ᴅ ʟᴜғғʏ\nɢᴇᴀʀ 𝟻. . .")
-    await asyncio.sleep(0.5)
+    m = await message.reply_text("one piece is real. . .")
+    await asyncio.sleep(0.3)
     await m.edit_text("🔥")
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.3)
     await m.edit_text("⚡")
-    await asyncio.sleep(0.5)
-    await m.edit_text("sᴜɴ ɢᴏᴅ ɴɪᴋᴀ!...")
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.3)
+    await m.edit_text("sneaky.")
+    await asyncio.sleep(0.3)
     await m.delete()
 
     if len(message.command) > 1:
@@ -623,9 +630,10 @@ async def start(client, message: Message):
 
                 wait = await message.reply_text("⏳ sᴇɴᴅɪɴɢ ғɪʟᴇs...")
 
-                # Load word filters once for the whole batch,
-                # instead of hitting DB per-file.
+                # Load word filters + protect_content status once for
+                # the whole batch, instead of hitting DB per-file.
                 batch_filters = await get_word_filters()
+                protect = await get_protect_content()
 
                 for msg_id in range(first_id, last_id + 1):
 
@@ -640,7 +648,7 @@ async def start(client, message: Message):
 
                         caption = (
                             f"**{original_caption}**\n\n"
-                            f"**›› ʙʏ : [sneaky](https://t.me/sneakycode)**"
+                            f"**›› ʙʏ : [ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
                         )
 
                         buttons = InlineKeyboardMarkup(
@@ -653,6 +661,7 @@ async def start(client, message: Message):
                                 caption=caption,
                                 reply_markup=buttons,
                                 supports_streaming=True,
+                                protect_content=protect,
                                 parse_mode=ParseMode.MARKDOWN
                             )
 
@@ -661,6 +670,7 @@ async def start(client, message: Message):
                                 audio=msg.audio.file_id,
                                 caption=caption,
                                 reply_markup=buttons,
+                                protect_content=protect,
                                 parse_mode=ParseMode.MARKDOWN
                             )
 
@@ -669,17 +679,22 @@ async def start(client, message: Message):
                                 document=msg.document.file_id,
                                 caption=caption,
                                 reply_markup=buttons,
+                                protect_content=protect,
                                 parse_mode=ParseMode.MARKDOWN
                             ) 
 
                         elif msg.sticker:
-                            sent = await message.reply_sticker(sticker=msg.sticker.file_id)
+                            sent = await message.reply_sticker(
+                                sticker=msg.sticker.file_id,
+                                protect_content=protect
+                            )
 
                         elif msg.animation:
                            sent = await message.reply_animation(
                                animation=msg.animation.file_id,
                                caption=caption,
                                reply_markup=buttons,
+                               protect_content=protect,
                                parse_mode=ParseMode.MARKDOWN
                            )
                         else:
@@ -719,14 +734,16 @@ async def start(client, message: Message):
                     f"Messages: {first_id} - {last_id}"
                 )
 
+                delete_minutes = await get_delete_time()
+
                 warn = await message.reply_text(
-                    " **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
-                    " **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 𝟻 ᴍɪɴᴜᴛᴇs.**\n"
-                    " **›› Sᴏ ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴛʜᴇᴍ.**",
+                    f" **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
+                    f" **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ {delete_minutes} ᴍɪɴᴜᴛᴇ(s).**\n"
+                    f" **›› Sᴏ ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴛʜᴇᴍ.**",
                     parse_mode=ParseMode.MARKDOWN
                 )
 
-                await asyncio.sleep(300)
+                await asyncio.sleep(delete_minutes * 60)
 
                 for x in sent_messages:
                     try:
@@ -755,9 +772,11 @@ async def start(client, message: Message):
         single_filters = await get_word_filters()
         original_caption = clean_caption(original_caption, single_filters)
 
+        protect = await get_protect_content()
+
         caption = (
     f"**{original_caption}**\n\n"
-    f"**›› ʙʏ :[sneaky](https://t.me/sneakycode)**"
+    f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
 )
 
         buttons = InlineKeyboardMarkup(
@@ -771,6 +790,7 @@ async def start(client, message: Message):
                 reply_markup=buttons,
                 thumb=data.get("thumb") if data.get("thumb") else None,
                 supports_streaming=True,
+                protect_content=protect,
                 parse_mode=ParseMode.MARKDOWN
         ) 
 
@@ -779,6 +799,7 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
+                protect_content=protect,
                 parse_mode=ParseMode.MARKDOWN
         )
 
@@ -787,12 +808,14 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
+                protect_content=protect,
                 parse_mode=ParseMode.MARKDOWN
         )
 
         elif data.get("file_type") == "sticker":
             sent = await message.reply_sticker(
-                data["file_id"]
+                data["file_id"],
+                protect_content=protect
         )
 
         elif data.get("file_type") == "animation":  # GIF
@@ -800,6 +823,7 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
+                protect_content=protect,
                 parse_mode=ParseMode.MARKDOWN
         )
 
@@ -817,22 +841,24 @@ async def start(client, message: Message):
             f"📂 {data.get('caption','No Caption')}"
         )
 
+        delete_minutes = await get_delete_time()
+
         warn = await message.reply_text(
-    " **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
-    " **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 𝟻 ᴍɪɴᴜᴛᴇs.**\n"
-    " **›› Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs.**\n\n"
-    " ›› 𝗡𝗼𝘁𝗲: ᴜsᴇ **𝗩𝗟𝗖 𝗣𝗹𝗮𝘆𝗲𝗿** ᴏʀ **𝗠𝗫 𝗣𝗹𝗮𝘆𝗲𝗿** ғᴏʀ ʙᴇsᴛ ᴇxᴘᴇʀɪᴇɴᴄᴇ.",
+    f" **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
+    f" **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ {delete_minutes} ᴍɪɴᴜᴛᴇ(s).**\n"
+    f" **›› Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs.**\n\n"
+    f" ›› 𝗡𝗼𝘁𝗲: ᴜsᴇ **𝗩𝗟𝗖 𝗣𝗹𝗮𝘆𝗲𝗿** ᴏʀ **𝗠𝗫 𝗣𝗹𝗮𝘆𝗲𝗿** if you face any issue.",
     parse_mode=ParseMode.MARKDOWN
         )
 
         # AFTER FILE ANIMATION
-        m2 = await message.reply_text("ᴍᴏɴᴋᴇʏ ᴅ ʟᴜғғʏ\nɢᴇᴀʀ 𝟻. . .")
+        m2 = await message.reply_text("one piece is real")
+        await asyncio.sleep(0.3)
+        await m2.edit_text("sneaky!...")
         await asyncio.sleep(0.4)
-        await m2.edit_text("sᴜɴ ɢᴏᴅ ɴɪᴋᴀ!...")
-        await asyncio.sleep(0.5)
         await m2.delete()
 
-        await asyncio.sleep(300)
+        await asyncio.sleep(delete_minutes * 60)
 
         try:
             await sent.delete()
@@ -1086,7 +1112,7 @@ async def auto_add_user(client, message):
 async def add_admin(client, message: Message):
 
     if message.from_user.id != OWNER_ID:
-        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!..")
+        return await message.reply_text("you are not admin bro!!..")
 
     if len(message.command) < 2:
         return await message.reply_text("ʀᴇᴘʟʏ ᴛᴏ /addadmin user_id")
@@ -1124,7 +1150,7 @@ async def add_admin(client, message: Message):
 async def remove_admin(client, message: Message):
 
     if message.from_user.id != OWNER_ID:
-        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!.")
+        return await message.reply_text("! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ **ADMIN**!!.")
 
     if len(message.command) < 2:
         return await message.reply_text("ʀᴇᴘʟʏ ᴛᴏ /removeadmin user_id")
@@ -1149,7 +1175,7 @@ async def admin_list(client, message: Message):
 
     if message.from_user.id != OWNER_ID:
         return await message.reply_text(
-            "**ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!..**"
+            "** ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ADMIN!!..**"
         )
 
     admins = await get_all_admins()
@@ -1198,7 +1224,7 @@ async def index_command(client, message):
         or await is_admin(message.from_user.id)
     ):
         return await message.reply_text(
-            "**ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!**"
+            "**! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ADMIN!!**"
         )
 
     rows = []
@@ -1409,7 +1435,7 @@ async def banlist(client, message):
 async def add_fsub(client, message):
 
     if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
-        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+        return await message.reply_text("! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ADMIN!!")
 
     # Reply to forwarded channel post
     if message.reply_to_message:
@@ -1710,8 +1736,8 @@ async def checksub_callback(client, query):
 async def about_callback(client, query):
     await query.message.edit_text(
         "⍟───[ MY ᴅᴇᴛᴀɪʟꜱ ]───⍟\n\n"
-        "‣ ᴍʏ ɴᴀᴍᴇ : [ᴀᴇʀᴏ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ](https://t.me/ZENISTOREBOT)\n"
-        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : [ᴍᴏʜᴀᴍᴍᴇᴅ](https://t.me/rarefroxy)\n"
+        "‣ ᴍʏ ɴᴀᴍᴇ : [ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ](https://t.me/sneakycode)\n"
+        "‣ ᴅᴇᴠᴇʟᴏᴘᴇʀ : [sneaky](https://t.me/rarefroxy)\n"
         "‣ ʟɪʙʀᴀʀʏ : [ᴘʏʀᴏɢʀᴀᴍ 𝟸.𝟶](https://pypi.org/project/Pyrogram/)\n"
         "‣ ʟᴀɴɢᴜᴀɢᴇ : [ᴘʏᴛʜᴏɴ 𝟹](https://www.python.org/downloads/)\n"
         "‣ ᴅᴀᴛᴀ ʙᴀsᴇ : [ᴍᴏɴɢᴏ ᴅʙ](https://www.mongodb.com/)\n"
@@ -2170,7 +2196,7 @@ async def support_page(client, query):
                     ),
                     InlineKeyboardButton(
                         "• sᴜᴘᴘᴏʀᴛ •",
-                        url="https://t.me/+KWvhNb8kkmExNDc1"
+                        url="https://t.me/ITOSHIFF"
                     )
                 ],
                 [
@@ -2911,6 +2937,141 @@ async def filter_list_cmd(client, message):
 # ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# AUTO DELETE TIME COMMAND
+# ------------------------- #
+
+@app.on_message(filters.command("setdeletetime") & filters.private)
+async def set_delete_time_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2:
+
+        current = await get_delete_time()
+
+        return await message.reply_text(
+            "Usage:\n"
+            "<code>/setdeletetime minutes</code>\n\n"
+            "Eg:\n"
+            "<code>/setdeletetime 10</code>\n\n"
+            f"⏱ <b>Cᴜʀʀᴇɴᴛ Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Tɪᴍᴇ:</b> <code>{current} ᴍɪɴᴜᴛᴇ(s)</code>"
+        )
+
+    try:
+        minutes = float(message.command[1])
+
+        if minutes <= 0:
+            raise ValueError
+
+    except:
+        return await message.reply_text(
+            "‼️ <b>Iɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ.</b>\n\n"
+            "Usage:\n<code>/setdeletetime 10</code>"
+        )
+
+    await set_delete_time(minutes)
+
+    await message.reply_text(
+        f"✅ <b>Aᴜᴛᴏ-Dᴇʟᴇᴛᴇ Tɪᴍᴇ Uᴘᴅᴀᴛᴇᴅ</b>\n\n"
+        f"⏱ Fɪʟᴇs ᴡɪʟʟ ɴᴏᴡ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴀғᴛᴇʀ <code>{minutes} ᴍɪɴᴜᴛᴇ(s)</code> ᴏғ ᴅᴇʟɪᴠᴇʀʏ."
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# CONTENT PROTECTION COMMAND
+# ------------------------- #
+
+@app.on_message(filters.command("setprotect") & filters.private)
+async def set_protect_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2 or message.command[1].lower() not in ("on", "off"):
+
+        current = await get_protect_content()
+        current_text = "ᴏɴ ✅" if current else "ᴏғғ ❌"
+
+        return await message.reply_text(
+            "Usage:\n"
+            "<code>/setprotect on</code>\n"
+            "<code>/setprotect off</code>\n\n"
+            f"🔒 <b>Cᴜʀʀᴇɴᴛ Sᴛᴀᴛᴜs:</b> {current_text}"
+        )
+
+    status = message.command[1].lower() == "on"
+
+    await set_protect_content(status)
+
+    if status:
+        await message.reply_text(
+            "🔒 <b>Cᴏɴᴛᴇɴᴛ Pʀᴏᴛᴇᴄᴛɪᴏɴ Eɴᴀʙʟᴇᴅ</b>\n\n"
+            "Aʙ ᴜsᴇʀs ʙᴏᴛ sᴇ ᴍɪʟɪ ᴋᴏɪ ʙʜɪ ғɪʟᴇ ғᴏʀᴡᴀʀᴅ, sᴀᴠᴇ ʏᴀ sʜᴀʀᴇ ɴᴀʜɪ ᴋᴀʀ ᴘᴀʏᴇɴɢᴇ."
+        )
+    else:
+        await message.reply_text(
+            "🔓 <b>Cᴏɴᴛᴇɴᴛ Pʀᴏᴛᴇᴄᴛɪᴏɴ Dɪsᴀʙʟᴇᴅ</b>\n\n"
+            "Aʙ ᴜsᴇʀs ғᴀɪʟs ᴋᴏ ɴᴏʀᴍᴀʟʟʏ ғᴏʀᴡᴀʀᴅ / sᴀᴠᴇ ᴋᴀʀ ᴘᴀʏᴇɴɢᴇ."
+        )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# HELP COMMAND
+# ------------------------- #
+
+HELP_TEXT = """
+<blockquote><b>📖 Bᴏᴛ Cᴏᴍᴍᴀɴᴅ Lɪsᴛ</b></blockquote>
+
+<b>👤 Usᴇʀ Cᴏᴍᴍᴀɴᴅs</b>
+• /start — sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ
+• /alive — ᴄʜᴇᴄᴋ ɪғ ʙᴏᴛ ɪs ᴀʟɪᴠᴇ
+• /id — ɢᴇᴛ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ
+• /disclaimer — ᴠɪᴇᴡ ᴅɪsᴄʟᴀɪᴍᴇʀ / ᴘʀɪᴠᴀᴄʏ
+• /lyrics [song] — sᴇᴀʀᴄʜ sᴏɴɢ ʟʏʀɪᴄs
+• /translate [lang] [text] — ᴛʀᴀɴsʟᴀᴛᴇ ᴛᴇxᴛ
+
+<b>👑 Aᴅᴍɪɴ / Oᴡɴᴇʀ Cᴏᴍᴍᴀɴᴅs</b>
+• /batch — ɢᴇɴᴇʀᴀᴛᴇ ʙᴀᴛᴄʜ ʟɪɴᴋ
+• /index — ғᴏʀᴄᴇ sᴜʙ ɪɴᴅᴇx
+• /addfsub, /removefsub, /fsublist — ғᴏʀᴄᴇ sᴜʙ ᴍɢᴍᴛ
+• /addfilter, /removefilter, /filterlist — ᴡᴏʀᴅ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀs
+• /setdeletetime [minutes] — sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ
+• /setprotect [on/off] — ᴛᴏɢɢʟᴇ ғᴏʀᴡᴀʀᴅ/sᴀᴠᴇ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
+
+<b>👑 Oᴡɴᴇʀ Oɴʟʏ Cᴏᴍᴍᴀɴᴅs</b>
+• /stats — ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs
+• /broadcast — ʙʀᴏᴀᴅᴄᴀsᴛ ᴀ ᴍᴇssᴀɢᴇ
+• /addadmin, /removeadmin, /adminlist — ᴀᴅᴍɪɴ ᴍɢᴍᴛ
+• /ban, /unban, /banlist — ʙᴀɴ ᴍɢᴍᴛ
+• /system — sʏsᴛᴇᴍ ɪɴғᴏ
+• /restart — ʀᴇsᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ
+• /speedtest — ɴᴇᴛᴡᴏʀᴋ sᴘᴇᴇᴅ ᴛᴇsᴛ
+• /adddb, /removedb, /dblist, /dbstatus — ᴍᴜʟᴛɪ-ᴅᴀᴛᴀʙᴀsᴇ ᴍɢᴍᴛ
+"""
+
+@app.on_message(filters.command("help") & filters.private)
+async def help_cmd(client, message):
+
+    await message.reply_text(
+        HELP_TEXT,
+        parse_mode=ParseMode.HTML
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
 # ------------------------- #      
 
 async def restore_databases():
@@ -2931,19 +3092,80 @@ async def restore_databases():
     if active:
         switch_database(active)
 
-if __name__ == "__main__":
-    keep_alive()  
+# ------------------------- #
+# BOT COMMAND MENU
+# ------------------------- #
+# Ye list Telegram ke "/" pressing pe suggestion
+# menu me dikhegi, taaki admin ko yaad na rakhna pade.
+# ------------------------- #
 
-    app.loop.run_until_complete(
-        restore_databases()
-    )
+BOT_COMMANDS = [
+    BotCommand("start", "Sᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ"),
+    BotCommand("help", "Sʜᴏᴡ ᴀʟʟ ᴄᴏᴍᴍᴀɴᴅs"),
+    BotCommand("alive", "Cʜᴇᴄᴋ ɪғ ʙᴏᴛ ɪs ᴀʟɪᴠᴇ"),
+    BotCommand("id", "Gᴇᴛ ʏᴏᴜʀ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ"),
+    BotCommand("disclaimer", "Vɪᴇᴡ ᴅɪsᴄʟᴀɪᴍᴇʀ / ᴘʀɪᴠᴀᴄʏ"),
+    BotCommand("lyrics", "Sᴇᴀʀᴄʜ sᴏɴɢ ʟʏʀɪᴄs"),
+    BotCommand("translate", "Tʀᴀɴsʟᴀᴛᴇ ᴛᴇxᴛ"),
+    BotCommand("batch", "Gᴇɴᴇʀᴀᴛᴇ ʙᴀᴛᴄʜ ʟɪɴᴋ"),
+    BotCommand("index", "Fᴏʀᴄᴇ sᴜʙ ɪɴᴅᴇx"),
+    BotCommand("addfsub", "Aᴅᴅ ғᴏʀᴄᴇ sᴜʙ ᴄʜᴀɴɴᴇʟ"),
+    BotCommand("removefsub", "Rᴇᴍᴏᴠᴇ ғᴏʀᴄᴇ sᴜʙ ᴄʜᴀɴɴᴇʟ"),
+    BotCommand("fsublist", "Lɪsᴛ ғᴏʀᴄᴇ sᴜʙ ᴄʜᴀɴɴᴇʟs"),
+    BotCommand("addfilter", "Aᴅᴅ ᴡᴏʀᴅ/ᴛᴀɢ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀ"),
+    BotCommand("removefilter", "Rᴇᴍᴏᴠᴇ ᴀ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀ"),
+    BotCommand("filterlist", "Lɪsᴛ ᴀʟʟ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀs"),
+    BotCommand("setdeletetime", "Sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ"),
+    BotCommand("setprotect", "Tᴏɢɢʟᴇ ғᴏʀᴡᴀʀᴅ/sᴀᴠᴇ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ"),
+    BotCommand("stats", "Bᴏᴛ sᴛᴀᴛɪsᴛɪᴄs (ᴏᴡɴᴇʀ)"),
+    BotCommand("broadcast", "Bʀᴏᴀᴅᴄᴀsᴛ ᴀ ᴍᴇssᴀɢᴇ (ᴏᴡɴᴇʀ)"),
+    BotCommand("addadmin", "Aᴅᴅ ᴀɴ ᴀᴅᴍɪɴ (ᴏᴡɴᴇʀ)"),
+    BotCommand("removeadmin", "Rᴇᴍᴏᴠᴇ ᴀɴ ᴀᴅᴍɪɴ (ᴏᴡɴᴇʀ)"),
+    BotCommand("adminlist", "Lɪsᴛ ᴀʟʟ ᴀᴅᴍɪɴs (ᴏᴡɴᴇʀ)"),
+    BotCommand("ban", "Bᴀɴ ᴀ ᴜsᴇʀ (ᴏᴡɴᴇʀ)"),
+    BotCommand("unban", "Uɴʙᴀɴ ᴀ ᴜsᴇʀ (ᴏᴡɴᴇʀ)"),
+    BotCommand("banlist", "Lɪsᴛ ʙᴀɴɴᴇᴅ ᴜsᴇʀs (ᴏᴡɴᴇʀ)"),
+    BotCommand("system", "Sʏsᴛᴇᴍ ɪɴғᴏ (ᴏᴡɴᴇʀ)"),
+    BotCommand("restart", "Rᴇsᴛᴀʀᴛ ᴛʜᴇ ʙᴏᴛ (ᴏᴡɴᴇʀ)"),
+    BotCommand("speedtest", "Nᴇᴛᴡᴏʀᴋ sᴘᴇᴇᴅ ᴛᴇsᴛ"),
+    BotCommand("adddb", "Aᴅᴅ ᴀ ᴅᴀᴛᴀʙᴀsᴇ (ᴏᴡɴᴇʀ)"),
+    BotCommand("removedb", "Rᴇᴍᴏᴠᴇ ᴀ ᴅᴀᴛᴀʙᴀsᴇ (ᴏᴡɴᴇʀ)"),
+    BotCommand("dblist", "Lɪsᴛ ᴀʟʟ ᴅᴀᴛᴀʙᴀsᴇs (ᴏᴡɴᴇʀ)"),
+    BotCommand("dbstatus", "Dᴀᴛᴀʙᴀsᴇ sᴛᴀᴛᴜs (ᴏᴡɴᴇʀ)"),
+]
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def main():
+
+    await app.start()
+
+    await restore_databases()
+
+    try:
+        await app.set_bot_commands(BOT_COMMANDS)
+        print("✅ Bot commands menu registered.")
+    except Exception as e:
+        print(f"⚠️ Failed to set bot commands: {e}")
+
     print("""
 ╔══════════════════════════════╗
 ║   sneaky only                  ║
 ║   ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ sᴛᴀʀᴛᴇᴅ.            ║
 ╚══════════════════════════════╝
 """)
-    app.run()
+
+    await idle()
+
+    await app.stop()
+
+if __name__ == "__main__":
+    keep_alive()
+
+    app.run(main())
 
 # ------------------------- #
 # Don't Remove Credit 
