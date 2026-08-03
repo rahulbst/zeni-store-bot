@@ -3187,10 +3187,10 @@ async def main():
 
     await app.stop()
 
-if __name__ == "__main__":
+if name == "main":
     keep_alive()
 
-    app.run(main())
+    asyncio.run(main())
 
 # ------------------------- #
 # Don't Remove Credit 
