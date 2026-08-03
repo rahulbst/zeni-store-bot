@@ -156,6 +156,11 @@ from database import (
     add_word_filter,
     remove_word_filter,
     get_word_filters,
+    add_name_filter,
+    remove_name_filter,
+    get_name_filters,
+    set_rename_enabled,
+    get_rename_enabled,
     set_delete_time,
     get_delete_time,
     set_protect_content,
@@ -185,6 +190,9 @@ START_TIME = time.time()
 BOT_VERSION = "v3.0"
 CACHE = {}
 MAINTENANCE = False
+
+# Temp folder used only when /setrename is ON (download + re-upload).
+os.makedirs("downloads", exist_ok=True)
 
 # ------------------------- #
 # Don't Remove Credit 
@@ -234,6 +242,71 @@ def clean_caption(caption, filters_list):
     caption = _filter_re.sub(r"\n\s*\n+", "\n", caption).strip()
 
     return caption
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# FILENAME FILTER SYSTEM
+# ------------------------- #
+# Same idea as clean_caption, but works on the actual
+# file name (extension is kept safe, only the name part
+# is cleaned). Used by /addnamefilter, /removenamefilter,
+# /namefilterlist and the /setrename real-rename feature.
+# ------------------------- #
+
+def clean_filename(filename, filters_list):
+
+    if not filename or not filters_list:
+        return filename
+
+    name, ext = os.path.splitext(filename)
+
+    for word in filters_list:
+        name = _filter_re.sub(
+            _filter_re.escape(word),
+            "",
+            name,
+            flags=_filter_re.IGNORECASE
+        )
+
+    name = _filter_re.sub(r"[ \t]+", " ", name)
+    name = _filter_re.sub(r"[_\-\.\s]{2,}", " ", name).strip(" ._-")
+
+    if not name:
+        name = "file"
+
+    return f"{name}{ext}"
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# CHANNEL ID NORMALIZER (force-sub bug fix)
+# ------------------------- #
+# Force-sub channels are stored in Mongo as strings
+# (str(chat.id) for private channels, or a username for
+# public ones). Pyrogram's client.get_chat() needs the
+# numeric chat id passed as an actual int - if you pass it
+# as a string like "-1001234567890", Pyrogram tries to
+# resolve it as a username instead, which always fails for
+# private channels. That failure used to be caught by the
+# generic "except Exception" in check_force_sub() and
+# treated as "invalid/deleted channel", which silently
+# DELETED the channel from the force-sub list right after
+# the very first check - this was why force-sub kept
+# stopping working shortly after being set up.
+# ------------------------- #
+
+def _normalize_channel(channel):
+    try:
+        return int(channel)
+    except (TypeError, ValueError):
+        return channel
 
 # ------------------------- #
 # Don't Remove Credit 
@@ -321,6 +394,10 @@ COMMAND_EXCLUDE_LIST = [
     "addfilter",
     "removefilter",
     "filterlist",
+    "addnamefilter",
+    "removenamefilter",
+    "namefilterlist",
+    "setrename",
     "setdeletetime",
     "setprotect",
     "help"
@@ -482,7 +559,7 @@ async def check_force_sub(client, user_id):
     for channel in channels:
 
         try:
-            chat = await client.get_chat(channel)
+            chat = await client.get_chat(_normalize_channel(channel))
         except Exception:
             # Invalid/deleted channel in DB
             try:
@@ -668,6 +745,10 @@ async def start(client, message: Message):
                 batch_filters = await get_word_filters()
                 protect = await get_protect_content()
 
+                # FILENAME FILTER + REAL RENAME (loaded once for the batch)
+                batch_name_filters = await get_name_filters()
+                batch_rename_enabled = await get_rename_enabled()
+
                 for msg_id in range(first_id, last_id + 1):
 
                     try:
@@ -699,22 +780,74 @@ async def start(client, message: Message):
                             )
 
                         elif msg.audio:
-                            sent = await message.reply_audio(
-                                audio=msg.audio.file_id,
-                                caption=caption,
-                                reply_markup=buttons,
-                               
-                                parse_mode=ParseMode.MARKDOWN
+                            original_name = msg.audio.file_name or ""
+                            cleaned_name = clean_filename(original_name, batch_name_filters)
+                            needs_rename = bool(
+                                batch_rename_enabled
+                                and original_name
+                                and cleaned_name != original_name
                             )
 
+                            if needs_rename:
+                                temp_path = None
+                                try:
+                                    temp_path = await client.download_media(
+                                        msg.audio.file_id,
+                                        file_name=f"downloads/{cleaned_name}"
+                                    )
+                                    sent = await message.reply_audio(
+                                        audio=temp_path,
+                                        caption=caption,
+                                        reply_markup=buttons,
+                                        file_name=cleaned_name,
+                                        parse_mode=ParseMode.MARKDOWN
+                                    )
+                                finally:
+                                    if temp_path and os.path.exists(temp_path):
+                                        os.remove(temp_path)
+                            else:
+                                sent = await message.reply_audio(
+                                    audio=msg.audio.file_id,
+                                    caption=caption,
+                                    reply_markup=buttons,
+                                   
+                                    parse_mode=ParseMode.MARKDOWN
+                                )
+
                         elif msg.document:
-                            sent = await message.reply_document(
-                                document=msg.document.file_id,
-                                caption=caption,
-                                reply_markup=buttons,
-                             
-                                parse_mode=ParseMode.MARKDOWN
-                            ) 
+                            original_name = msg.document.file_name or ""
+                            cleaned_name = clean_filename(original_name, batch_name_filters)
+                            needs_rename = bool(
+                                batch_rename_enabled
+                                and original_name
+                                and cleaned_name != original_name
+                            )
+
+                            if needs_rename:
+                                temp_path = None
+                                try:
+                                    temp_path = await client.download_media(
+                                        msg.document.file_id,
+                                        file_name=f"downloads/{cleaned_name}"
+                                    )
+                                    sent = await message.reply_document(
+                                        document=temp_path,
+                                        caption=caption,
+                                        reply_markup=buttons,
+                                        file_name=cleaned_name,
+                                        parse_mode=ParseMode.MARKDOWN
+                                    )
+                                finally:
+                                    if temp_path and os.path.exists(temp_path):
+                                        os.remove(temp_path)
+                            else:
+                                sent = await message.reply_document(
+                                    document=msg.document.file_id,
+                                    caption=caption,
+                                    reply_markup=buttons,
+                                 
+                                    parse_mode=ParseMode.MARKDOWN
+                                ) 
 
                         elif msg.sticker:
                             sent = await message.reply_sticker(
@@ -770,7 +903,7 @@ async def start(client, message: Message):
                 delete_minutes = await get_delete_time()
 
                 warn = await message.reply_text(
-                    f" **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
+                    f" **⏳ iam sneaky..**\n\n"
                     f" **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ {delete_minutes} ᴍɪɴᴜᴛᴇ(s).**\n"
                     f" **›› Sᴏ ᴘʟᴇᴀsᴇ sᴀᴠᴇ ᴛʜᴇᴍ.**",
                     parse_mode=ParseMode.MARKDOWN
@@ -811,6 +944,19 @@ async def start(client, message: Message):
 
         protect = await get_protect_content()
 
+        # ------------------------- #
+        # FILENAME FILTER + REAL RENAME
+        # ------------------------- #
+        original_file_name = data.get("file_name", "")
+        name_filters_list = await get_name_filters()
+        cleaned_file_name = clean_filename(original_file_name, name_filters_list)
+        rename_enabled = await get_rename_enabled()
+        needs_rename = bool(
+            rename_enabled
+            and original_file_name
+            and cleaned_file_name != original_file_name
+        )
+
         caption = (
     f"**{original_caption}**\n\n"
     f"**›› ʙʏ :[ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
@@ -832,22 +978,59 @@ async def start(client, message: Message):
         ) 
 
         elif data.get("file_type") == "audio":
-            sent = await message.reply_audio(
-                data["file_id"],
-                caption=caption,
-                reply_markup=buttons,
-               
-                parse_mode=ParseMode.MARKDOWN
-        )
+            if needs_rename:
+                temp_path = None
+                try:
+                    temp_path = await client.download_media(
+                        data["file_id"],
+                        file_name=f"downloads/{cleaned_file_name}"
+                    )
+                    sent = await message.reply_audio(
+                        temp_path,
+                        caption=caption,
+                        reply_markup=buttons,
+                        file_name=cleaned_file_name,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        os.remove(temp_path)
+            else:
+                sent = await message.reply_audio(
+                    data["file_id"],
+                    caption=caption,
+                    reply_markup=buttons,
+                   
+                    parse_mode=ParseMode.MARKDOWN
+            )
 
         elif data.get("file_type") == "document":
-            sent = await message.reply_document(
-                data["file_id"],
-                caption=caption,
-                reply_markup=buttons,
-             
-                parse_mode=ParseMode.MARKDOWN
-        )
+            if needs_rename:
+                temp_path = None
+                try:
+                    temp_path = await client.download_media(
+                        data["file_id"],
+                        file_name=f"downloads/{cleaned_file_name}"
+                    )
+                    sent = await message.reply_document(
+                        temp_path,
+                        caption=caption,
+                        reply_markup=buttons,
+                        file_name=cleaned_file_name,
+                        thumb=data.get("thumb") if data.get("thumb") else None,
+                        parse_mode=ParseMode.MARKDOWN
+                    )
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        os.remove(temp_path)
+            else:
+                sent = await message.reply_document(
+                    data["file_id"],
+                    caption=caption,
+                    reply_markup=buttons,
+                 
+                    parse_mode=ParseMode.MARKDOWN
+            )
 
         elif data.get("file_type") == "sticker":
             sent = await message.reply_sticker(
@@ -881,8 +1064,8 @@ async def start(client, message: Message):
         delete_minutes = await get_delete_time()
 
         warn = await message.reply_text(
-    f" **⏳ Dᴜᴇ ᴛᴏ ᴄᴏᴘʏʀɪɢʜᴛ ɪssᴜᴇs...**\n\n"
-    f" **›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ {delete_minutes} ᴍɪɴᴜᴛᴇ(s).**\n"
+    f" **⏳ Yᴏᴜʀ ғɪʟᴇ ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴀғᴛᴇʀ ᴛʜᴇ sᴘᴇᴄɪғɪᴇᴅ ᴛɪᴍᴇ.**\n\n"
+    f" **›› Iᴛ ᴡɪʟʟ ʙᴇ ʀᴇᴍᴏᴠᴇᴅ ᴡɪᴛʜɪɴ {delete_minutes} ᴍɪɴᴜᴛᴇ(s).**\n"
     f" **›› Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ sᴀᴠᴇᴅ ᴍᴇssᴀɢᴇs.**\n\n"
     f" ›› 𝗡𝗼𝘁𝗲: ᴜsᴇ **𝗩𝗟𝗖 𝗣𝗹𝗮𝘆𝗲𝗿** ᴏʀ **𝗠𝗫 𝗣𝗹𝗮𝘆𝗲𝗿** ғᴏʀ ʙᴇsᴛ ᴇxᴘᴇʀɪᴇɴᴄᴇ.",
     parse_mode=ParseMode.MARKDOWN
@@ -1615,7 +1798,7 @@ async def fsub_list(client, message):
 
     for i, ch in enumerate(channels, start=1):
         try:
-            chat = await client.get_chat(ch)
+            chat = await client.get_chat(_normalize_channel(ch))
 
             if chat.username:
                 text += f"**{i}.** @{chat.username}\n"
@@ -3014,6 +3197,132 @@ async def filter_list_cmd(client, message):
 # ------------------------- #
 
 # ------------------------- #
+# FILENAME FILTER COMMANDS
+# ------------------------- #
+
+@app.on_message(filters.command("addnamefilter") & filters.private)
+async def add_name_filter_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2:
+        return await message.reply_text(
+            "Usage:\n<code>/addnamefilter word_or_tag</code>\n\n"
+            "Eg:\n<code>/addnamefilter @old_channel_tag</code>"
+        )
+
+    word = message.text.split(None, 1)[1].strip()
+
+    await add_name_filter(word)
+
+    await message.reply_text(
+        f"✅ <b>Nᴀᴍᴇ Fɪʟᴛᴇʀ Aᴅᴅᴇᴅ:</b> <code>{word}</code>\n\n"
+        f"Ab is text ko file ke naam se hataya jayega.\n"
+        f"Real filename change ke liye <code>/setrename on</code> bhi karo."
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+@app.on_message(filters.command("removenamefilter") & filters.private)
+async def remove_name_filter_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2:
+        return await message.reply_text(
+            "Usage:\n<code>/removenamefilter word_or_tag</code>"
+        )
+
+    word = message.text.split(None, 1)[1].strip()
+
+    await remove_name_filter(word)
+
+    await message.reply_text(
+        f"✅ <b>Nᴀᴍᴇ Fɪʟᴛᴇʀ Rᴇᴍᴏᴠᴇᴅ:</b> <code>{word}</code>"
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+@app.on_message(filters.command("namefilterlist") & filters.private)
+async def name_filter_list_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    words = await get_name_filters()
+
+    if not words:
+        return await message.reply_text(
+            "‼️ <b>Kᴏɪ Nᴀᴍᴇ Fɪʟᴛᴇʀ Aᴅᴅ Nᴀʜɪ Kɪᴀ Gᴀʏᴀ Aʙʜɪ.</b>"
+        )
+
+    text = "🧹 <b>Aᴄᴛɪᴠᴇ Nᴀᴍᴇ Fɪʟᴛᴇʀs</b>\n\n"
+
+    for i, w in enumerate(words, start=1):
+        text += f"{i}. <code>{w}</code>\n"
+
+    await message.reply_text(text)
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# REAL RENAME TOGGLE COMMAND
+# ------------------------- #
+
+@app.on_message(filters.command("setrename") & filters.private)
+async def set_rename_cmd(client, message):
+
+    if not (message.from_user.id == OWNER_ID or await is_admin(message.from_user.id)):
+        return await message.reply_text("ʙᴀᴋᴋᴀ ! ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴍʏ ꜱᴇɴᴘᴀɪ!!")
+
+    if len(message.command) < 2 or message.command[1].lower() not in ("on", "off"):
+
+        current = await get_rename_enabled()
+        current_text = "ᴏɴ ✅" if current else "ᴏғғ ❌"
+
+        return await message.reply_text(
+            "Usage:\n"
+            "<code>/setrename on</code>\n"
+            "<code>/setrename off</code>\n\n"
+            f"🔄 <b>Cᴜʀʀᴇɴᴛ Sᴛᴀᴛᴜs:</b> {current_text}\n\n"
+            "<b>ON</b> — bot download karke naye (cleaned) naam se re-upload "
+            "karega. Real filename change hoga, lekin thoda extra time/bandwidth lagega.\n"
+            "<b>OFF</b> (default) — fast delivery, filename change nahi hota "
+            "(sirf caption filters apply hote hain)."
+        )
+
+    status = message.command[1].lower() == "on"
+
+    await set_rename_enabled(status)
+
+    if status:
+        await message.reply_text(
+            "🔄 <b>Rᴇᴀʟ Rᴇɴᴀᴍᴇ Eɴᴀʙʟᴇᴅ</b>\n\n"
+            "Aʙ document/audio files download karke naye naam se re-upload hongi."
+        )
+    else:
+        await message.reply_text(
+            "🔄 <b>Rᴇᴀʟ Rᴇɴᴀᴍᴇ Dɪsᴀʙʟᴇᴅ</b>\n\n"
+            "Aʙ files fast delivery (file_id reuse) se jayengi."
+        )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
 # AUTO DELETE TIME COMMAND
 # ------------------------- #
 
@@ -3121,6 +3430,8 @@ HELP_TEXT = """
 • /index — ғᴏʀᴄᴇ sᴜʙ ɪɴᴅᴇx
 • /addfsub, /removefsub, /fsublist — ғᴏʀᴄᴇ sᴜʙ ᴍɢᴍᴛ
 • /addfilter, /removefilter, /filterlist — ᴡᴏʀᴅ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀs
+• /addnamefilter, /removenamefilter, /namefilterlist — ғɪʟᴇ ɴᴀᴍᴇ ғɪʟᴛᴇʀs
+• /setrename [on/off] — ᴛᴏɢɢʟᴇ ʀᴇᴀʟ ғɪʟᴇɴᴀᴍᴇ ʀᴇɴᴀᴍᴇ (ᴅᴏᴡɴʟᴏᴀᴅ+ʀᴇᴜᴘʟᴏᴀᴅ)
 • /setdeletetime [minutes] — sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ
 • /setprotect [on/off] — ᴛᴏɢɢʟᴇ ғᴏʀᴡᴀʀᴅ/sᴀᴠᴇ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ
 
@@ -3189,6 +3500,10 @@ BOT_COMMANDS = [
     BotCommand("addfilter", "Aᴅᴅ ᴡᴏʀᴅ/ᴛᴀɢ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀ"),
     BotCommand("removefilter", "Rᴇᴍᴏᴠᴇ ᴀ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀ"),
     BotCommand("filterlist", "Lɪsᴛ ᴀʟʟ ᴄᴀᴘᴛɪᴏɴ ғɪʟᴛᴇʀs"),
+    BotCommand("addnamefilter", "Aᴅᴅ ᴀ ғɪʟᴇ ɴᴀᴍᴇ ғɪʟᴛᴇʀ"),
+    BotCommand("removenamefilter", "Rᴇᴍᴏᴠᴇ ᴀ ғɪʟᴇ ɴᴀᴍᴇ ғɪʟᴛᴇʀ"),
+    BotCommand("namefilterlist", "Lɪsᴛ ᴀʟʟ ғɪʟᴇ ɴᴀᴍᴇ ғɪʟᴛᴇʀs"),
+    BotCommand("setrename", "Tᴏɢɢʟᴇ ʀᴇᴀʟ ғɪʟᴇɴᴀᴍᴇ ʀᴇɴᴀᴍᴇ"),
     BotCommand("setdeletetime", "Sᴇᴛ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ"),
     BotCommand("setprotect", "Tᴏɢɢʟᴇ ғᴏʀᴡᴀʀᴅ/sᴀᴠᴇ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ"),
     BotCommand("stats", "Bᴏᴛ sᴛᴀᴛɪsᴛɪᴄs (ᴏᴡɴᴇʀ)"),
@@ -3246,4 +3561,5 @@ if __name__ == "__main__":
 # ------------------------- #
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
+# ------------------------- #ohammed_29
 # ------------------------- #
