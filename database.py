@@ -91,14 +91,22 @@ async def get_file(file_unique_id):
 
 # USERS
 async def add_user(user_id):
+    # FIX (new-user log spam): previously this returned nothing, so
+    # bot.py had no way to know whether a user was genuinely new or
+    # already existed - it just sent a "new user" log on every /start.
+    # Now we return True only when a document was actually INSERTED
+    # (upserted_id is set), and False when it already existed / no
+    # user_id was given.
     if not user_id:
-        return
+        return False
 
-    await users.update_one(
+    result = await users.update_one(
         {"user_id": int(user_id)},
         {"$setOnInsert": {"user_id": int(user_id)}},
         upsert=True
     )
+
+    return result.upserted_id is not None
     
 # ------------------------- #
 # Don't Remove Credit 
