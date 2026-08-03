@@ -682,7 +682,7 @@ async def start(client, message: Message):
                                 caption=caption,
                                 reply_markup=buttons,
                                 supports_streaming=True,
-                                protect_content=protect,
+                               
                                 parse_mode=ParseMode.MARKDOWN
                             )
 
@@ -691,7 +691,7 @@ async def start(client, message: Message):
                                 audio=msg.audio.file_id,
                                 caption=caption,
                                 reply_markup=buttons,
-                                protect_content=protect,
+                               
                                 parse_mode=ParseMode.MARKDOWN
                             )
 
@@ -700,14 +700,14 @@ async def start(client, message: Message):
                                 document=msg.document.file_id,
                                 caption=caption,
                                 reply_markup=buttons,
-                                protect_content=protect,
+                             
                                 parse_mode=ParseMode.MARKDOWN
                             ) 
 
                         elif msg.sticker:
                             sent = await message.reply_sticker(
                                 sticker=msg.sticker.file_id,
-                                protect_content=protect
+                             
                             )
 
                         elif msg.animation:
@@ -715,7 +715,7 @@ async def start(client, message: Message):
                                animation=msg.animation.file_id,
                                caption=caption,
                                reply_markup=buttons,
-                               protect_content=protect,
+                              
                                parse_mode=ParseMode.MARKDOWN
                            )
                         else:
@@ -815,7 +815,7 @@ async def start(client, message: Message):
                 reply_markup=buttons,
                 thumb=data.get("thumb") if data.get("thumb") else None,
                 supports_streaming=True,
-                protect_content=protect,
+                
                 parse_mode=ParseMode.MARKDOWN
         ) 
 
@@ -824,7 +824,7 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
-                protect_content=protect,
+               
                 parse_mode=ParseMode.MARKDOWN
         )
 
@@ -833,14 +833,14 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
-                protect_content=protect,
+             
                 parse_mode=ParseMode.MARKDOWN
         )
 
         elif data.get("file_type") == "sticker":
             sent = await message.reply_sticker(
                 data["file_id"],
-                protect_content=protect
+             
         )
 
         elif data.get("file_type") == "animation":  # GIF
@@ -848,7 +848,7 @@ async def start(client, message: Message):
                 data["file_id"],
                 caption=caption,
                 reply_markup=buttons,
-                protect_content=protect,
+                
                 parse_mode=ParseMode.MARKDOWN
         )
 
