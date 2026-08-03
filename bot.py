@@ -562,21 +562,33 @@ async def start(client, message: Message):
             disable_web_page_preview=True
         )
 
-    await add_user(user_id)
+    # FIX (new-user log spam): add_user now returns True only when the
+    # user is genuinely new (first time in DB). We use this instead of
+    # unconditionally sending the "new user" log every /start.
+    is_new_user = await add_user(user_id)
 
-    # Save parameter before Force Subscribe check
+    # FIX (force-sub "Verification expired" even for real users):
+    # save_verify() used to run ONLY when a deep-link param was present.
+    # A plain /start never saved anything, so pressing "Try Again" after
+    # joining the force-sub channel(s) always found param=None and
+    # showed "Verification expired" even though the user is legit.
+    # Now we always save a param - "home" for plain /start.
     if len(message.command) > 1:
         param = message.command[1]
-        await save_verify(user_id, param)
+    else:
+        param = "home"
+
+    await save_verify(user_id, param)
 
     user = message.from_user
 
-    await send_log(
-        f"**ɴᴇᴡ ᴜsᴇʀ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ**\n\n"
-        f"👤 **{user.first_name}**\n"
-        f"🆔 **`{user.id}`**\n"
-        f"📛 **@{user.username if user.username else 'None'}**"
-    )
+    if is_new_user:
+        await send_log(
+            f"**ɴᴇᴡ ᴜsᴇʀ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ**\n\n"
+            f"👤 **{user.first_name}**\n"
+            f"🆔 **`{user.id}`**\n"
+            f"📛 **@{user.username if user.username else 'None'}**"
+        )
 
     # ------------------------- #
     # FORCE SUBSCRIBE CHECK
@@ -604,7 +616,7 @@ async def start(client, message: Message):
     await m.edit_text("🔥")
     await asyncio.sleep(0.3)
     await m.edit_text("⚡")
-    await asyncio.sleep(0.4)
+    await asyncio.sleep(0.3)
     await m.edit_text("sneaky!...")
     await asyncio.sleep(0.3)
     await m.delete()
@@ -1125,6 +1137,10 @@ async def auto_add_user(client, message):
         return
         
     if message.from_user:
+        # NOTE: return value intentionally ignored here - this generic
+        # text handler should just make sure the user exists in DB, it
+        # should NOT send a "new user" log (that's handled once, inside
+        # start(), to avoid duplicate/incorrect log spam).
         await add_user(message.from_user.id)
         
 # ------------------------- #
@@ -1724,6 +1740,9 @@ async def checksub_callback(client, query):
 
     param = await get_verify(query.from_user.id)
 
+    # FIX: plain /start now always stores "home" via save_verify(), so
+    # param should basically never be missing anymore. We still keep
+    # this guard for genuinely stale/expired verification records.
     if not param:
         return await query.answer(
             "**‼️ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴇxᴘɪʀᴇᴅ. Gᴏ Bᴀᴄᴋ ᴀɴᴅ Tʀʏ Aɢᴀɪɴ..**",
@@ -1732,6 +1751,36 @@ async def checksub_callback(client, query):
 
     # remove force subscribe message
     await query.message.delete()
+
+    # FIX: "home" means the user did a plain /start (no deep-link param).
+    # Previously this case wasn't handled separately, so it always went
+    # through the fake-/start deep-link flow below, which then tried to
+    # treat "home" as a file_unique_id/batch payload and failed with
+    # "File Not Found". Now we just show the normal home menu directly.
+    if param == "home":
+
+        photo = random.choice(IMAGES)
+
+        return await client.send_photo(
+            chat_id=query.message.chat.id,
+            photo=photo,
+            caption=(
+                "𝗛𝗲𝗹𝗹𝗼 ♡,\n\n"
+                "›› 𝗜 𝗰𝗮𝗻 𝘀𝘁𝗼𝗿𝗲 𝗽𝗿𝗶𝘃𝗮𝘁𝗲 𝗳𝗶𝗹𝗲𝘀 𝗶𝗻 𝗦𝗽𝗲𝗰𝗶𝗳𝗶𝗲𝗱 𝗖𝗵𝗮𝗻𝗻𝗲𝗹 𝗮𝗻𝗱 𝗼𝘁𝗵𝗲𝗿 𝘂𝘀𝗲𝗿𝘀 𝗰𝗮𝗻 𝗮𝗰𝗰𝘀𝘀 𝗶𝘁 𝗳𝗿𝗼𝗺 𝘀𝗽𝗲𝗰𝗶𝗮𝗹 𝗹𝗶𝗻𝗸."
+            ),
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton("• ᴜᴘᴅᴀᴛᴇs •", url="https://t.me/sneakycode"),
+                        InlineKeyboardButton("• ᴀʙᴏᴜᴛ •", callback_data="about")
+                    ],
+                    [
+                        InlineKeyboardButton("• ᴏᴡɴᴇʀ •", url="https://t.me/rarefroxy")
+                    ]
+                ]
+            ),
+            parse_mode=ParseMode.MARKDOWN
+        )
 
     # directly run start
     fake = type("obj", (), {})()
