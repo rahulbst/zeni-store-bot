@@ -636,3 +636,91 @@ async def get_word_filters():
 # Don't Remove Credit 
 # Owner @Mr_Mohammed_29
 # ------------------------- #
+
+# ------------------------- #
+# FILENAME FILTER SYSTEM
+# ------------------------- #
+# Word_filters caption se text hatate hain, lekin filename
+# alag hota hai. Yeh naya set sirf FILE NAME me se text/tag
+# hatane ke liye hai (real rename ke liye /setrename bhi on
+# karna padega, warna sirf caption/display pe reflect hoga).
+# ------------------------- #
+
+name_filters = db["name_filters"]
+
+async def add_name_filter(word):
+
+    await name_filters.update_one(
+        {"word": word.lower()},
+        {"$set": {"word": word.lower()}},
+        upsert=True
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def remove_name_filter(word):
+
+    await name_filters.delete_one(
+        {"word": word.lower()}
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def get_name_filters():
+
+    result = []
+
+    async for w in name_filters.find({}, {"_id": 0}):
+        result.append(w["word"])
+
+    return result
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+# ------------------------- #
+# REAL RENAME TOGGLE
+# ------------------------- #
+# OFF (default): fast delivery, file_id reuse - filename
+# filters sirf caption/display level pe kaam karte hain
+# (Telegram document/audio ka real filename change nahi
+# hota kyunki woh file ke andar hi baked hota hai).
+# ON: bot file download karke naye (cleaned) naam se
+# re-upload karega - real filename change hoga, lekin
+# thoda extra time/bandwidth lagega.
+# ------------------------- #
+
+async def set_rename_enabled(status: bool):
+
+    await db_settings.update_one(
+        {"_id": "rename_enabled"},
+        {"$set": {"enabled": bool(status)}},
+        upsert=True
+    )
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
+
+async def get_rename_enabled():
+
+    data = await db_settings.find_one({"_id": "rename_enabled"})
+
+    if data and "enabled" in data:
+        return data["enabled"]
+
+    return False
+
+# ------------------------- #
+# Don't Remove Credit 
+# Owner @Mr_Mohammed_29
+# ------------------------- #
