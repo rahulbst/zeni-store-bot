@@ -3187,7 +3187,7 @@ async def main():
 
     await app.stop()
 
-if name == "main":
+if __name__ == "__main__":
     keep_alive()
 
     asyncio.run(main())
