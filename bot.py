@@ -670,15 +670,34 @@ async def start(client, message: Message):
     if len(message.command) > 1:
         param = message.command[1]
 
-        # ================= BATCH LINK =================
+        # ================= CHECK IF THIS IS A BATCH LINK =================
+        # FIX: detection is now separate from batch-processing. A
+        # single-file link's file_unique_id can fail to base64-decode
+        # cleanly; previously that exception fell into the SAME except
+        # block that also covered the whole batch-send, and that except
+        # did a bare "return" -> function exited before the single-file
+        # code below ever ran -> "link opens, file never arrives".
+        # Now a decode failure just means is_batch stays False and we
+        # fall through normally to single-file delivery.
+        # ------------------------------------------------------------
+
+        is_batch = False
+        decoded = None
 
         try:
-
             decoded = base64.urlsafe_b64decode(
                 param + "=" * (-len(param) % 4)
             ).decode("utf-8", errors="ignore")
 
             if decoded.startswith("batch:"):
+                is_batch = True
+
+        except Exception:
+            is_batch = False
+
+        if is_batch:
+
+            try:
 
                 _, chat_id, first_id, last_id = decoded.split(":")
 
@@ -815,11 +834,15 @@ async def start(client, message: Message):
                     await warn.delete()
                 except:
                     pass
- 
-                return
 
-        except Exception as e:
+            except Exception as e:
+                print(e)
+
             return
+
+        # ================= SINGLE FILE LINK =================
+        # (Now correctly reached whenever param isn't a batch link,
+        # instead of being silently skipped.)
 
         file_unique_id = message.command[1]
         data = await get_file(file_unique_id)
