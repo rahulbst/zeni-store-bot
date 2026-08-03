@@ -599,14 +599,14 @@ async def start(client, message: Message):
         )
 
     # START ANIMATION
-    m = await message.reply_text("ᴍᴏɴᴋᴇʏ ᴅ ʟᴜғғʏ\nɢᴇᴀʀ 𝟻. . .")
-    await asyncio.sleep(0.5)
+    m = await message.reply_text("one piece is real. . .")
+    await asyncio.sleep(0.4)
     await m.edit_text("🔥")
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.3)
     await m.edit_text("⚡")
-    await asyncio.sleep(0.5)
-    await m.edit_text("sᴜɴ ɢᴏᴅ ɴɪᴋᴀ!...")
-    await asyncio.sleep(0.5)
+    await asyncio.sleep(0.4)
+    await m.edit_text("sneaky!...")
+    await asyncio.sleep(0.3)
     await m.delete()
 
     if len(message.command) > 1:
@@ -669,7 +669,7 @@ async def start(client, message: Message):
 
                         caption = (
                             f"**{original_caption}**\n\n"
-                            f"**›› ʙʏ : [ᴀᴇʀᴏ ᴜɴɪᴛʏ](https://t.me/sneakycode)**"
+                            f"**›› ʙʏ : [@ssneakycode](https://t.me/sneakycode)**"
                         )
 
                         buttons = InlineKeyboardMarkup(
@@ -877,10 +877,10 @@ async def start(client, message: Message):
         )
 
         # AFTER FILE ANIMATION
-        m2 = await message.reply_text("ᴍᴏɴᴋᴇʏ ᴅ ʟᴜғғʏ\nɢᴇᴀʀ 𝟻. . .")
+        m2 = await message.reply_text("one piece is real. . .")
         await asyncio.sleep(0.4)
-        await m2.edit_text("sᴜɴ ɢᴏᴅ ɴɪᴋᴀ!...")
-        await asyncio.sleep(0.5)
+        await m2.edit_text("sneaky!...")
+        await asyncio.sleep(0.3)
         await m2.delete()
 
         await asyncio.sleep(delete_minutes * 60)
@@ -2048,7 +2048,7 @@ async def restart_cmd(client, message):
 DISCLAIMER_TEXT = """
 <blockquote><b>ᴅɪsᴄʟᴀɪᴍᴇʀ</b></blockquote>
 
-• Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ Aᴇʀᴏ Fɪʟᴇ Sᴛᴏʀᴇ Bᴏᴛ.
+• Wᴇʟᴄᴏᴍᴇ ᴛᴏ ᴛʜᴇ Zeni Fɪʟᴇ Sᴛᴏʀᴇ Bᴏᴛ.
 
 • Pʟᴇᴀsᴇ ʀᴇᴀᴅ ᴛʜᴇ ғᴏʟʟᴏᴡɪɴɢ ɪɴғᴏʀᴍᴀᴛɪᴏɴ ʙᴇғᴏʀᴇ ᴜsɪɴɢ ᴛʜᴇ ʙᴏᴛ.
 
@@ -2089,10 +2089,10 @@ VERSION_TEXT = f"""
 ⚡ <b>• Pʏʀᴏɢʀᴀᴍ •</b> <code>𝟸.𝟶.𝟷𝟶𝟼</code>
 🗄  <b>• Dᴀᴛᴀʙᴀsᴇ •</b> <code>MᴏɴɢᴏDB Aᴛʟᴀs</code>
 🌐 <b>• Hᴏsᴛɪɴɢ •</b> <code>Rᴇɴᴅᴇʀ Wᴇʙ Sᴇʀᴠɪᴄᴇ</code>
-👨‍💻 <b>• Dᴇᴠᴇʟᴏᴘᴇʀ •</b> <a href="https://t.me/rarefroxy">Mᴏʜᴀᴍᴍᴇᴅ</a>
-📢 <b>• ᴜᴘᴅᴀᴛᴇs •</b> <a href="https://t.me/sneakycode">Aᴇʀᴏ Uɴɪᴛʏ</a>
+👨‍💻 <b>• Dᴇᴠᴇʟᴏᴘᴇʀ •</b> <a href="https://t.me/rarefroxy">sneaky</a>
+📢 <b>• ᴜᴘᴅᴀᴛᴇs •</b> <a href="https://t.me/sneakycode">sneakycodes</a>
 💬 <b>• sᴜᴘᴘᴏʀᴛ •</b> <a href="https://t.me/+KWvhNb8kkmExNDc1">Discussion</a>
-🌟 <b>• Gɪᴛʜᴜʙ •</b> <a href="https://github.com/MohammedDev-yt">Cʟɪᴄᴋ Hᴇʀᴇ</a>
+🌟 <b>• Gɪᴛʜᴜʙ •</b> <a href="https://github.com/rahul">Cʟɪᴄᴋ Hᴇʀᴇ</a>
 """
 
 SUPPORT_TEXT = """
